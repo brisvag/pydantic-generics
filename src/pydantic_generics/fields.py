@@ -1,11 +1,11 @@
 from contextlib import contextmanager
-from typing import Generic, Iterator
+from typing import Generic, Iterator, Type
 
 import pydantic.config
 import pydantic.fields
 import pydantic.validators
 
-from .monkeypatch import patched_make_arbitrary_type_validator
+from .validators import simple_casting_validator
 
 __all__ = ["ModelField"]
 
@@ -25,10 +25,20 @@ def generic_types_allowed(field: pydantic.fields.ModelField) -> Iterator[None]:
         config.arbitrary_types_allowed = before
 
 
+@contextmanager
+def generic_validator_inserted(type_: Type) -> Iterator[None]:
+    v = (Generic, [simple_casting_validator(type_)])
+    pydantic.validators._VALIDATORS.insert(0, v)
+    try:
+        yield
+    finally:
+        pydantic.validators._VALIDATORS.pop(0)
+
+
 class ModelField(pydantic.fields.ModelField):
     def populate_validators(self) -> None:
-        with patched_make_arbitrary_type_validator():
-            # XXX: not sure I like this, the alternative would be to just say
-            # "you have to use arbitrary_types_allowed if you want to use this"
-            with generic_types_allowed(self):
-                super().populate_validators()
+        # XXX: not sure I like this, "generic_types_allowed"
+        # the alternative would be to just say
+        # "you have to use arbitrary_types_allowed if you want to use this"
+        with generic_types_allowed(self), generic_validator_inserted(self.type_):
+            super().populate_validators()

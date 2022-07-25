@@ -35,10 +35,10 @@ def patched_pydantic_model_field(mod: ModuleType = pydantic.main) -> Iterator[No
 @contextmanager
 def patched_make_arbitrary_type_validator() -> Iterator[None]:
     """Monkeypatch pydantic make_arbitrary_type_validator."""
-    from .validators import make_arbitrary_type_validator
+    from .validators import simple_casting_validator
 
     orig = pydantic.validators.make_arbitrary_type_validator
-    pydantic.validators.make_arbitrary_type_validator = make_arbitrary_type_validator
+    pydantic.validators.make_arbitrary_type_validator = simple_casting_validator
     try:
         yield
     finally:
