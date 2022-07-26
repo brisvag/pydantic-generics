@@ -204,7 +204,7 @@ def test_parametrized_generics(field: type, value: Any, expected: Any) -> None:
 
 OTHER_CASES = [
     # union tries to coerce in order and stops as soon as it succeeds
-    (Union[str, float], 1.0, '1', str),
+    (Union[str, float], 1.0, '1.0', str),
     (Union[float, str], '1', 1.0, float),
     # optional should not fail with None
     (Optional[int], None, None, type(None)),
