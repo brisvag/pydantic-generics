@@ -1,3 +1,4 @@
+import sys
 from typing import (
     Any,
     Generic,
@@ -161,6 +162,11 @@ class MyGenericWithCustomValidator(Generic[T, U]):
             return 'second'
 
 
+class MyTripleTuple(_ReprMixin, Tuple[T, U, V]):
+    def __init__(self, v):
+        self.v = tuple(v)
+
+
 CASES = [
     (MyGeneric, 1),
     (MyGenericSequence, [1]),
@@ -238,9 +244,7 @@ PARAMETRIZED_CASES = [
     (MyValidatingMutableSet[str], [1], {'1'}),
     (MyList[int], '123', [1, 2, 3]),
     # multiple parameters for iterable will validate one by one
-    (MyTuple[int, float, str], [1, 2, 3], (1, 2.0, '3')),
-    # tuple accepts ellipsis
-    (MyTuple[str, ...], (1, 2), ('1', '2')),
+    (MyTripleTuple[int, float, str], [1, 2, 3], (1, 2.0, '3')),
     (MyGenericWithCustomValidator[str, int], 'a', 'first'),
     (MyGenericWithCustomValidator[str, int], 1, 'second'),
 ]
@@ -299,8 +303,6 @@ FAILING_CASES = [
     (MyMutableMapping, [1]),
     (MyGenericSequence[int], 'asd'),
     (MyMutableMapping[int, int], {'a': 'b'}),
-    # different length of parameters and value
-    (MyTuple[int, float, str], [1, 2]),
     # TODO: this should not fail like this
     (MyTripleParameterIterable[int, float, str], [1]),
     (MyTuple[int], (1, 1)),
@@ -313,3 +315,27 @@ def test_incompatible_types(field: type, value: Any) -> None:
     assert issubclass(Model, BaseModel)
     with pytest.raises(ValidationError):
         Model(x=value)
+
+
+@pytest.mark.skipif(sys.version_info < (3, 9), reason='requires python3.9 or higher')
+def test_python39() -> None:
+    field = MyTripleTuple[str, ...]
+    value = (1, 2)
+    expected = ('1', '2')
+    Model = create_model("Model", x=(field, ...))
+    assert issubclass(Model, BaseModel)
+    instance = Model(x=value)
+    attr = getattr(instance, "x")
+    custom_type = get_origin(field) or field
+    assert isinstance(attr, custom_type)
+    assert all(v == e for v, e in zip(attr.v, expected))
+    assert all(type(v) == type(e) for v, e in zip(attr.v, expected))
+    assert attr.v == expected
+
+    # different length of parameters and value
+    field = MyTripleTuple[int, float, str]
+    value = [1, 2]
+    Model = create_model("Model", x=(field, ...))
+    assert issubclass(Model, BaseModel)
+    with pytest.raises(ValidationError):
+        instance = Model(x=value)
