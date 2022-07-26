@@ -14,6 +14,7 @@ from typing import (
     Iterable,
     Mapping,
     Tuple,
+    Callable,
 )
 
 import pytest
@@ -262,6 +263,10 @@ def test_parametrized_generics(field: type, value: Any, expected: Any) -> None:
     assert attr.v == expected
 
 
+def noop():
+    pass
+
+
 OTHER_CASES = [
     # union tries to coerce in order and stops as soon as it succeeds
     (Union[str, float], 1.0, '1.0', str),
@@ -274,6 +279,7 @@ OTHER_CASES = [
     # subclass of builtin
     (MyString, '1', '1', MyString),
     (MyValidatingString, '1', '1', MyValidatingString),
+    (Callable, noop, noop, type(noop)),
 ]
 
 
