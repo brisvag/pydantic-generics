@@ -122,6 +122,14 @@ class MyValidatingMutableMapping(_ClassValidatorMixin, MyMutableMapping[T]):
     pass
 
 
+class MyString(str):
+    pass
+
+
+class MyValidatingString(_ClassValidatorMixin, MyString):
+    pass
+
+
 CASES = [
     (MyGeneric, 1),
     (MyGenericSequence, [1]),
@@ -209,7 +217,9 @@ OTHER_CASES = [
     (Union[float, str], '1', '1', str),
     (Optional[int], None, None, type(None)),
     (Optional[int], 1, 1, int),
-    (Literal[1], 1, 1, int)
+    (Literal[1], 1, 1, int),
+    (MyString, '1', '1', MyString),
+    (MyValidatingString, '1', '1', MyValidatingString),
 ]
 
 
