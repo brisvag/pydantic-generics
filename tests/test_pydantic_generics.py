@@ -237,7 +237,7 @@ PARAMETRIZED_CASES = [
     (MyValidatingMutableSet[str], [1], {'1'}),
     (MyList[int], '123', [1, 2, 3]),
     # multiple parameters for iterable will validate one by one
-    (MyList[int, float, str], [1, 2, 3], [1, 2.0, '3']),
+    (MyTuple[int, float, str], [1, 2, 3], (1, 2.0, '3')),
     # tuple accepts ellipsis
     (MyTuple[str, ...], (1, 2), ('1', '2')),
     (MyGenericWithCustomValidator[str, int], 'a', 'first'),
@@ -294,7 +294,7 @@ FAILING_CASES = [
     (MyGenericSequence[int], 'asd'),
     (MyMutableMapping[int, int], {'a': 'b'}),
     # different length of parameters and value
-    (MyList[int, float, str], [1, 2]),
+    (MyTuple[int, float, str], [1, 2]),
     # TODO: this should not fail like this
     (MyTripleParameterIterable[int, float, str], [1]),
 ]
