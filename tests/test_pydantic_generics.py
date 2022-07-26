@@ -213,11 +213,15 @@ def test_parametrized_generics(field: type, value: Any, expected: Any) -> None:
 
 
 OTHER_CASES = [
-    (Union[str, float], 1.0, 1.0, float),
-    (Union[float, str], '1', '1', str),
+    # union tries to coerce in order and stops as soon as it succeeds
+    (Union[str, float], 1.0, '1', str),
+    (Union[float, str], '1', 1.0, float),
+    # optional should not fail with None
     (Optional[int], None, None, type(None)),
     (Optional[int], 1, 1, int),
+    # Literal is not a subclass of type, so it can cause issues when using `issubclass`
     (Literal[1], 1, 1, int),
+    # subclass of builtin
     (MyString, '1', '1', MyString),
     (MyValidatingString, '1', '1', MyValidatingString),
 ]
