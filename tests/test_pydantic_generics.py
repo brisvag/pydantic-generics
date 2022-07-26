@@ -47,14 +47,11 @@ class MyValidatingGeneric(_ClassValidatorMixin, MyGeneric[T]):
 
 
 class MyGenericSequence(_ReprMixin, Sequence[T]):
+    __len__ = None
+    __getitem__ = None
+
     def __init__(self, data: Sequence[T]):
         self.v = list(data)
-
-    def __getitem__(self, index: int) -> T:  # type: ignore
-        return self.v[index]
-
-    def __len__(self) -> int:
-        return len(self.v)
 
 
 class MyValidatingGenericSequence(_ClassValidatorMixin, MyGenericSequence[T]):
@@ -64,9 +61,6 @@ class MyValidatingGenericSequence(_ClassValidatorMixin, MyGenericSequence[T]):
 class MyList(_ReprMixin, List[T]):
     def __init__(self, v):
         self.v = list(v)
-
-    def __iter__(self):
-        yield from self.v
 
 
 class MyValidatingList(_ClassValidatorMixin, MyList[T]):
@@ -91,14 +85,12 @@ class MyValidatingMutableSequence(_ClassValidatorMixin, MyMutableSequence[T]):
 class MyMutableSet(_ReprMixin, MutableSet[T]):
     __contains__ = None
     __len__ = None
+    __iter__ = None
     add = None
     discard = None
 
     def __init__(self, v):
         self.v = set(v)
-
-    def __iter__(self):
-        yield from self.v
 
 
 class MyValidatingMutableSet(_ClassValidatorMixin, MyMutableSet[T]):
@@ -110,12 +102,10 @@ class MyMutableMapping(_ReprMixin, MutableMapping[T, U]):
     __getitem__ = None
     __len__ = None
     __setitem__ = None
+    __iter__ = None
 
     def __init__(self, v):
         self.v = dict(v)
-
-    def __iter__(self):
-        yield from self.v
 
 
 class MyValidatingMutableMapping(_ClassValidatorMixin, MyMutableMapping[T]):
