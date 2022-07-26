@@ -108,7 +108,7 @@ class MyMutableMapping(_ReprMixin, MutableMapping[T, U]):
         self.v = dict(v)
 
 
-class MyValidatingMutableMapping(_ClassValidatorMixin, MyMutableMapping[T]):
+class MyValidatingMutableMapping(_ClassValidatorMixin, MyMutableMapping[T, U]):
     pass
 
 
