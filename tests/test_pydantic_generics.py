@@ -11,14 +11,19 @@ from typing import (
     Union,
     Literal,
     Optional,
+    Iterable,
+    Mapping,
+    Tuple,
 )
 
 import pytest
+from pydantic.error_wrappers import ValidationError
 
 from pydantic_generics import BaseModel, create_model
 
 T = TypeVar("T")
 U = TypeVar("U")
+V = TypeVar("V")
 
 
 class _ClassValidatorMixin:
@@ -64,6 +69,15 @@ class MyList(_ReprMixin, List[T]):
 
 
 class MyValidatingList(_ClassValidatorMixin, MyList[T]):
+    pass
+
+
+class MyTuple(_ReprMixin, Tuple[T]):
+    def __init__(self, v):
+        self.v = tuple(v)
+
+
+class MyValidatingTuple(_ClassValidatorMixin, MyTuple[T]):
     pass
 
 
@@ -120,6 +134,16 @@ class MyValidatingString(_ClassValidatorMixin, MyString):
     pass
 
 
+class MyTripleParameterIterable(Generic[T, U, V]):
+    """Not a subclass of iterable, but technically iterable"""
+
+    def __init__(self, v):
+        self.v = list(v)
+
+    def __iter__(self):
+        yield from self.v
+
+
 CASES = [
     (MyGeneric, 1),
     (MyGenericSequence, [1]),
@@ -134,16 +158,19 @@ CASES = [
     (MyValidatingGeneric, 1),
     (MyValidatingGenericSequence, [1]),
     (MyValidatingList, [1]),
+    (MyValidatingTuple, (1,)),
     (MyValidatingMutableSequence, [1]),
     (MyValidatingMutableSet, {1}),
     (MyValidatingMutableMapping, {1: 2}),
     # input of different type that can be coerced
     (MyGenericSequence, {1}),
     (MyList, {1}),
+    (MyTuple, [1]),
     (MyMutableSequence, {1}),
     (MyMutableSet, [1]),
     (MyValidatingGenericSequence, {1}),
     (MyValidatingList, {1}),
+    (MyValidatingTuple, {1}),
     (MyValidatingMutableSequence, {1}),
     (MyValidatingMutableSet, [1]),
 ]
@@ -173,21 +200,30 @@ PARAMETRIZED_CASES = [
     # coerce element type
     (MyMutableSequence[str], [1], ['1']),
     (MyList[str], [1], ['1']),
+    (MyTuple[str], (1,), ('1',)),
     (MyMutableMapping[str, str], {1: 2}, {'1': '2'}),
     (MyMutableSet[str], {1}, {'1'}),
     (MyMutableSequence[str], {1}, ['1']),
     (MyValidatingMutableSequence[str], [1], ['1']),
     (MyValidatingList[str], [1], ['1']),
+    (MyValidatingTuple[str], (1,), ('1',)),
     (MyValidatingMutableMapping[str, str], {1: 2}, {'1': '2'}),
     (MyValidatingMutableSet[str], {1}, {'1'}),
     (MyValidatingMutableSequence[str], {1}, ['1']),
     # coerce container type as well
     (MyMutableSequence[str], {1}, ['1']),
     (MyList[str], {1}, ['1']),
+    (MyTuple[str], {1}, ('1',)),
     (MyMutableSet[str], [1], {'1'}),
     (MyValidatingMutableSequence[str], {1}, ['1']),
     (MyValidatingList[str], {1}, ['1']),
+    (MyValidatingTuple[str], {1}, ('1',)),
     (MyValidatingMutableSet[str], [1], {'1'}),
+    (MyList[int], '123', [1, 2, 3]),
+    # multiple parameters for iterable will validate one by one
+    (MyList[int, float, str], [1, 2, 3], [1, 2.0, '3']),
+    # tuple accepts ellipsis
+    (MyTuple[str, ...], (1, 2), ('1', '2')),
 ]
 
 
@@ -199,6 +235,12 @@ def test_parametrized_generics(field: type, value: Any, expected: Any) -> None:
     attr = getattr(instance, "x")
     custom_type = get_origin(field) or field
     assert isinstance(attr, custom_type)
+    if issubclass(custom_type, Iterable):
+        assert all(v == e for v, e in zip(attr.v, expected))
+        assert all(type(v) == type(e) for v, e in zip(attr.v, expected))
+    if issubclass(custom_type, Mapping):
+        assert all(v == e for v, e in zip(attr.v.values(), expected.values()))
+        assert all(type(v) == type(e) for v, e in zip(attr.v.values(), expected.values()))
     assert attr.v == expected
 
 
@@ -225,3 +267,26 @@ def test_other_types(field: type, value: Any, expected: Any, expected_type: type
     attr = getattr(instance, "x")
     assert attr == expected
     assert type(attr) is expected_type
+
+
+FAILING_CASES = [
+    (MyGenericSequence, 1),
+    (MyMutableSequence, None),
+    (MyMutableSet, {1: 2}),
+    (MyMutableMapping, [1]),
+    (MyGeneric[int], 'a'),
+    (MyGenericSequence[int], 'asd'),
+    (MyMutableMapping[int, int], {'a': 'b'}),
+    # different length of parameters and value
+    (MyList[int, float, str], [1, 2]),
+    # TODO: this should not fail like this
+    (MyTripleParameterIterable[int, float, str], [1]),
+]
+
+
+@pytest.mark.parametrize("field, value", FAILING_CASES)
+def test_incompatible_types(field: type, value: Any) -> None:
+    Model = create_model("Model", x=(field, ...))
+    assert issubclass(Model, BaseModel)
+    # with pytest.raises(ValidationError):
+    Model(x=value)

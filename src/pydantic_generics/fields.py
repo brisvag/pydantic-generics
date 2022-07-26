@@ -68,5 +68,10 @@ class ModelField(pydantic.fields.ModelField):
             super()._type_analysis()
         else:
             self.shape = pydantic.fields.SHAPE_GENERIC
-            self.sub_fields = [self._create_sub_type(t, f'{self.name}_{i}') for i, t in enumerate(get_args(self.type_))]
+            # ellipsis breaks everything down the line, and is otherwise useless other than for static typing
+            self.sub_fields = [
+                self._create_sub_type(t, f'{self.name}_{i}')
+                for i, t in enumerate(get_args(self.type_))
+                if t is not Ellipsis
+            ]
             self.type_ = origin
