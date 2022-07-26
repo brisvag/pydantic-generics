@@ -31,6 +31,33 @@ class Missing:
     pass
 
 
+def tuple_element_casting_validator(field) -> Callable[[T], T]:
+    def cast_elements(v: Any) -> T:
+        if not field.sub_fields:
+            return v
+
+        result = []
+        if len(field.sub_fields) == 2 and field.sub_fields[1].type_ is type(Ellipsis):
+            f = field.sub_fields[0]
+            for i, v_ in enumerate(v):
+                r, e = f.validate(v_, {}, loc=i)
+                if e:
+                    raise CannotCastError(type=f.type_, error='')
+                result.append(r)
+            return result
+        else:
+            for i, (v_, f) in enumerate(zip_longest(v, field.sub_fields, fillvalue=Missing)):
+                if v_ is Missing or f is Missing:
+                    raise ValueError('args must be either a single one, or as many as there are elements')
+                r, e = f.validate(v_, {}, loc=i)
+                if e:
+                    raise CannotCastError(type=f.type_, error='')
+                result.append(r)
+            return result
+
+    return cast_elements
+
+
 def element_casting_validator(field) -> Callable[[T], T]:
     def cast_elements(v: Any) -> T:
         if not field.sub_fields:

@@ -1,11 +1,11 @@
 from contextlib import contextmanager
-from typing import Generic, Iterator, get_origin, get_args, Iterable, Mapping
+from typing import Generic, Iterator, get_origin, get_args, Iterable, Mapping, Tuple
 
 import pydantic.config
 import pydantic.fields
 import pydantic.validators
 
-from .validators import simple_casting_validator, element_casting_validator, mapping_casting_validator
+from .validators import simple_casting_validator, element_casting_validator, mapping_casting_validator, tuple_element_casting_validator
 
 __all__ = ["ModelField"]
 
@@ -28,7 +28,9 @@ def generic_types_allowed(field: pydantic.fields.ModelField) -> Iterator[None]:
 @contextmanager
 def generic_validator_inserted(field: pydantic.fields.ModelField) -> Iterator[None]:
     v = [
+        (type(Ellipsis), []),  # so the ellipsis type does not mess up things
         (Mapping, [mapping_casting_validator(field), simple_casting_validator(field.type_)]),
+        (Tuple, [tuple_element_casting_validator(field), simple_casting_validator(field.type_)]),
         (Iterable, [element_casting_validator(field), simple_casting_validator(field.type_)]),
         (Generic, [simple_casting_validator(field.type_)]),
     ]
@@ -68,10 +70,7 @@ class ModelField(pydantic.fields.ModelField):
             super()._type_analysis()
         else:
             self.shape = pydantic.fields.SHAPE_GENERIC
-            # ellipsis breaks everything down the line, and is otherwise useless other than for static typing
-            self.sub_fields = [
-                self._create_sub_type(t, f'{self.name}_{i}')
-                for i, t in enumerate(get_args(self.type_))
-                if t is not Ellipsis
-            ]
+            # ellipsis breaks everything down the line, it needs to be a type
+            args = [t if t is not Ellipsis else type(Ellipsis) for t in get_args(self.type_)]
+            self.sub_fields = [self._create_sub_type(t, f'{self.name}_{i}') for i, t in enumerate(args)]
             self.type_ = origin

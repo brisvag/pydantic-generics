@@ -297,6 +297,7 @@ FAILING_CASES = [
     (MyTuple[int, float, str], [1, 2]),
     # TODO: this should not fail like this
     (MyTripleParameterIterable[int, float, str], [1]),
+    (MyTuple[int], (1, 1)),
 ]
 
 
