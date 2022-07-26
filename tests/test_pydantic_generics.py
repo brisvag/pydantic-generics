@@ -144,6 +144,22 @@ class MyTripleParameterIterable(Generic[T, U, V]):
         yield from self.v
 
 
+class MyGenericWithCustomValidator(Generic[T, U]):
+    def __init__(self, v):
+        self.v = v
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v, field):
+        if isinstance(v, field.sub_fields[0].type_):
+            return 'first'
+        elif isinstance(v, field.sub_fields[1].type_):
+            return 'second'
+
+
 CASES = [
     (MyGeneric, 1),
     (MyGenericSequence, [1]),
@@ -224,6 +240,8 @@ PARAMETRIZED_CASES = [
     (MyList[int, float, str], [1, 2, 3], [1, 2.0, '3']),
     # tuple accepts ellipsis
     (MyTuple[str, ...], (1, 2), ('1', '2')),
+    (MyGenericWithCustomValidator[str, int], 'a', 'first'),
+    (MyGenericWithCustomValidator[str, int], 1, 'second'),
 ]
 
 
@@ -272,9 +290,7 @@ def test_other_types(field: type, value: Any, expected: Any, expected_type: type
 FAILING_CASES = [
     (MyGenericSequence, 1),
     (MyMutableSequence, None),
-    (MyMutableSet, {1: 2}),
     (MyMutableMapping, [1]),
-    (MyGeneric[int], 'a'),
     (MyGenericSequence[int], 'asd'),
     (MyMutableMapping[int, int], {'a': 'b'}),
     # different length of parameters and value
@@ -288,5 +304,5 @@ FAILING_CASES = [
 def test_incompatible_types(field: type, value: Any) -> None:
     Model = create_model("Model", x=(field, ...))
     assert issubclass(Model, BaseModel)
-    # with pytest.raises(ValidationError):
-    Model(x=value)
+    with pytest.raises(ValidationError):
+        Model(x=value)
