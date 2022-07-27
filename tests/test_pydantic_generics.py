@@ -39,12 +39,15 @@ class _ClassValidatorMixin:
         return v
 
 
-class _ReprMixin:
+class _DunderMixin:
     def __repr__(self):
         return f'{self.__class__.__name__}({repr(self.v)})'
 
+    def __eq__(self, o):
+        return self.v == o
 
-class MyGeneric(_ReprMixin, Generic[T]):
+
+class MyGeneric(_DunderMixin, Generic[T]):
     def __init__(self, value: T):
         self.v = value
 
@@ -53,7 +56,7 @@ class MyValidatingGeneric(_ClassValidatorMixin, MyGeneric[T]):
     pass
 
 
-class MyGenericSequence(_ReprMixin, Sequence[T]):
+class MyGenericSequence(_DunderMixin, Sequence[T]):
     __len__ = None
     __getitem__ = None
 
@@ -65,7 +68,7 @@ class MyValidatingGenericSequence(_ClassValidatorMixin, MyGenericSequence[T]):
     pass
 
 
-class MyList(_ReprMixin, List[T]):
+class MyList(_DunderMixin, List[T]):
     def __init__(self, v):
         self.v = list(v)
 
@@ -74,7 +77,7 @@ class MyValidatingList(_ClassValidatorMixin, MyList[T]):
     pass
 
 
-class MyTuple(_ReprMixin, Tuple[T]):
+class MyTuple(_DunderMixin, Tuple[T]):
     def __init__(self, v):
         self.v = tuple(v)
 
@@ -83,7 +86,7 @@ class MyValidatingTuple(_ClassValidatorMixin, MyTuple[T]):
     pass
 
 
-class MyMutableSequence(_ReprMixin, MutableSequence[T]):
+class MyMutableSequence(_DunderMixin, MutableSequence[T]):
     __delitem__ = None
     __getitem__ = None
     __len__ = None
@@ -98,7 +101,7 @@ class MyValidatingMutableSequence(_ClassValidatorMixin, MyMutableSequence[T]):
     pass
 
 
-class MyMutableSet(_ReprMixin, MutableSet[T]):
+class MyMutableSet(_DunderMixin, MutableSet[T]):
     __contains__ = None
     __len__ = None
     __iter__ = None
@@ -113,15 +116,20 @@ class MyValidatingMutableSet(_ClassValidatorMixin, MyMutableSet[T]):
     pass
 
 
-class MyMutableMapping(_ReprMixin, MutableMapping[T, U]):
+class MyMutableMapping(_DunderMixin, MutableMapping[T, U]):
     __delitem__ = None
     __getitem__ = None
     __len__ = None
     __setitem__ = None
-    __iter__ = None
 
     def __init__(self, v):
         self.v = dict(v)
+
+    def __iter__(self):
+        yield from self.v
+
+    def __getitem__(self, k):
+        return self.v[k]
 
 
 class MyValidatingMutableMapping(_ClassValidatorMixin, MyMutableMapping[T, U]):
@@ -162,7 +170,7 @@ class MyGenericWithCustomValidator(Generic[T, U]):
             return 'second'
 
 
-class MyTripleTuple(_ReprMixin, Tuple[T, U, V]):
+class MyTripleTuple(_DunderMixin, Tuple[T, U, V]):
     def __init__(self, v):
         self.v = tuple(v)
 
@@ -245,8 +253,11 @@ PARAMETRIZED_CASES = [
     (MyList[int], '123', [1, 2, 3]),
     # multiple parameters for iterable will validate one by one
     (MyTripleTuple[int, float, str], [1, 2, 3], (1, 2.0, '3')),
+    # custom validation coerce to the right
     (MyGenericWithCustomValidator[str, int], 'a', 'first'),
     (MyGenericWithCustomValidator[str, int], 1, 'second'),
+    (MyList[MyList[Union[int, str]]], [[1, 'a', 1.0], [False]], [MyList([1, 'a', 1]), MyList([0])]),
+    (MyMutableMapping[MyString, MyMutableSet[float]], {1: {1, False}}, {MyString('1'): MyMutableSet({1.0, 0.0})}),
 ]
 
 
