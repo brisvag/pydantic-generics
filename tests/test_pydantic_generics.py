@@ -16,6 +16,9 @@ from typing import (
     Mapping,
     Tuple,
     Callable,
+    SupportsInt,
+    Protocol,
+    runtime_checkable,
 )
 
 import pytest
@@ -176,6 +179,27 @@ class MyTripleTuple(_DunderMixin, Tuple[T, U, V]):
         self.v = tuple(v)
 
 
+@runtime_checkable
+class MyProtocol(Protocol):
+    x: int
+
+
+class MyConcreteProtocol(MyProtocol):
+    def __init__(self, x):
+        self.x = x
+
+    def __eq__(self, other):
+        return self.x == self.x
+
+
+class FollowsProtocol:
+    def __init__(self, x):
+        self.x = x
+
+    def __eq__(self, other):
+        return self.x == self.x
+
+
 CASES = [
     (MyGeneric, 1),
     (MyGenericSequence, [1]),
@@ -296,6 +320,11 @@ OTHER_CASES = [
     (MyString, '1', '1', MyString),
     (MyValidatingString, '1', '1', MyValidatingString),
     (Callable, noop, noop, type(noop)),
+    # abstract classes and protocols should not be coerced
+    (SupportsInt, 1, 1, int),
+    (MyProtocol, FollowsProtocol(1), FollowsProtocol(1), FollowsProtocol),
+    # but "concrete" protocols should
+    (MyConcreteProtocol, FollowsProtocol(1), MyConcreteProtocol(1), MyConcreteProtocol)
 ]
 
 
