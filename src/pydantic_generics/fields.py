@@ -11,21 +11,6 @@ __all__ = ["ModelField"]
 
 
 @contextmanager
-def generic_types_allowed(field: pydantic.fields.ModelField) -> Iterator[None]:
-    try:
-        is_generic = issubclass(field.outer_type_, Generic)  # type: ignore
-    except TypeError:
-        is_generic = False
-
-    config = field.model_config
-    before, config.arbitrary_types_allowed = config.arbitrary_types_allowed, is_generic
-    try:
-        yield
-    finally:
-        config.arbitrary_types_allowed = before
-
-
-@contextmanager
 def generic_validator_inserted(field: pydantic.fields.ModelField) -> Iterator[None]:
     v = [
         (type(Ellipsis), []),  # so the ellipsis type does not mess up things
@@ -43,10 +28,7 @@ def generic_validator_inserted(field: pydantic.fields.ModelField) -> Iterator[No
 
 class ModelField(pydantic.fields.ModelField):
     def populate_validators(self) -> None:
-        # XXX: not sure I like this, "generic_types_allowed"
-        # the alternative would be to just say
-        # "you have to use arbitrary_types_allowed if you want to use this"
-        with generic_types_allowed(self), generic_validator_inserted(self):
+        with generic_validator_inserted(self):
             super().populate_validators()
             # override self.validators generation, cause we need *both* class validators
             # and generic validators

@@ -20,6 +20,7 @@ from typing import (
 
 import pytest
 from pydantic.error_wrappers import ValidationError
+from pydantic.color import Color
 
 from pydantic_generics import BaseModel, create_model
 
@@ -295,6 +296,7 @@ OTHER_CASES = [
     (MyString, '1', '1', MyString),
     (MyValidatingString, '1', '1', MyValidatingString),
     (Callable, noop, noop, type(noop)),
+    (Color, 'red', 'red', type(Color)),
 ]
 
 
