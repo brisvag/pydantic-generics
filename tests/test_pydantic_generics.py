@@ -296,7 +296,6 @@ OTHER_CASES = [
     (MyString, '1', '1', MyString),
     (MyValidatingString, '1', '1', MyValidatingString),
     (Callable, noop, noop, type(noop)),
-    (Color, 'red', 'red', type(Color)),
 ]
 
 
@@ -352,3 +351,13 @@ def test_python39() -> None:
     assert issubclass(Model, BaseModel)
     with pytest.raises(ValidationError):
         instance = Model(x=value)
+
+
+def test_color():
+    """test separately because == does not work on Color"""
+    class M(BaseModel):
+        c: Color
+
+    m = M(c='red')
+    assert isinstance(m.c, Color)
+    assert m.c.as_named() == 'red'
