@@ -1,5 +1,4 @@
 from itertools import zip_longest
-from inspect import isabstract
 from typing import Any, Callable, Type, TypeVar
 import dataclasses
 
@@ -15,7 +14,7 @@ class CannotCastError(pydantic.errors.PydanticTypeError):
 
 def simple_casting_validator(type_: Type[T]) -> Callable[[T], T]:
     def arbitrary_type_validator(v: Any) -> T:
-        if isinstance(v, type_) or isabstract(type_) or getattr(type_, '_is_protocol', False):
+        if isinstance(v, type_):
             return v
 
         # cast

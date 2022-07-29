@@ -201,6 +201,11 @@ class FollowsProtocol:
         return self.x == self.x
 
 
+class DoesNotFollowProtocol:
+    def __init__(self, y):
+        self.y = y
+
+
 @dataclass
 class MyDataClass:
     a: int
@@ -357,6 +362,8 @@ FAILING_CASES = [
     # TODO: this should not fail like this
     (MyTripleParameterIterable[int, float, str], [1]),
     (MyTuple[int], (1, 1)),
+    (SupportsInt, 'asd'),
+    (MyProtocol, DoesNotFollowProtocol(1)),
 ]
 
 
