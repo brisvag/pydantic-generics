@@ -1,6 +1,7 @@
 from itertools import zip_longest
 from inspect import isabstract
 from typing import Any, Callable, Type, TypeVar
+import dataclasses
 
 import pydantic.errors
 import pydantic.validators
@@ -108,3 +109,9 @@ def mapping_casting_validator(field) -> Callable[[T], T]:
         return result
 
     return cast_elements
+
+
+def coerce_dataclass_validator(cls):
+    def coerce_dataclass(v):
+        return cls(**dataclasses.asdict(v))
+    return coerce_dataclass
