@@ -24,6 +24,7 @@ from typing import (
 import pytest
 from pydantic.error_wrappers import ValidationError
 from pydantic.color import Color
+from pydantic.dataclasses import dataclass
 
 from pydantic_generics import BaseModel, create_model
 
@@ -200,6 +201,11 @@ class FollowsProtocol:
         return self.x == self.x
 
 
+@dataclass
+class MyDataClass:
+    a: int
+
+
 CASES = [
     (MyGeneric, 1),
     (MyGenericSequence, [1]),
@@ -324,7 +330,8 @@ OTHER_CASES = [
     (SupportsInt, 1, 1, int),
     (MyProtocol, FollowsProtocol(1), FollowsProtocol(1), FollowsProtocol),
     # but "concrete" protocols should
-    (MyConcreteProtocol, FollowsProtocol(1), MyConcreteProtocol(1), MyConcreteProtocol)
+    (MyConcreteProtocol, FollowsProtocol(1), MyConcreteProtocol(1), MyConcreteProtocol),
+    (MyDataClass, MyDataClass(a=1), MyDataClass(a=1), MyDataClass),
 ]
 
 
