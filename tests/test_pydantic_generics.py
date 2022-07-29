@@ -332,6 +332,9 @@ OTHER_CASES = [
     # but "concrete" protocols should
     (MyConcreteProtocol, FollowsProtocol(1), MyConcreteProtocol(1), MyConcreteProtocol),
     (MyDataClass, MyDataClass(a=1), MyDataClass(a=1), MyDataClass),
+    # optional dataclass must accept None
+    (Optional[MyDataClass], MyDataClass(a=1), MyDataClass(a=1), MyDataClass),
+    (Optional[MyDataClass], None, None, type(None)),
 ]
 
 

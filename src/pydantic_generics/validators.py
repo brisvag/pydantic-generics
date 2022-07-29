@@ -4,7 +4,7 @@ from typing import Any, Callable, Type, TypeVar
 import dataclasses
 
 import pydantic.errors
-import pydantic.validators
+from pydantic.dataclasses import _validate_dataclass as _pydantic_validate_dataclass
 
 T = TypeVar("T")
 
@@ -111,7 +111,15 @@ def mapping_casting_validator(field) -> Callable[[T], T]:
     return cast_elements
 
 
+def _validate_dataclass(cls, v, field):
+    if field.allow_none and v is None:
+        return None
+    return _pydantic_validate_dataclass(cls, v)
+
+
 def coerce_dataclass_validator(cls):
     def coerce_dataclass(v):
+        if v is None:
+            return None
         return cls(**dataclasses.asdict(v))
     return coerce_dataclass

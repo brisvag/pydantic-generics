@@ -62,3 +62,14 @@ def force_arbitrary_types_allowed(namespace):
             yield
         finally:
             old_cfg.arbitrary_types_allowed = False
+
+
+@contextmanager
+def patched_dataclass_validator():
+    from .validators import _validate_dataclass
+
+    orig, pydantic.dataclasses._validate_dataclass = pydantic.dataclasses._validate_dataclass, _validate_dataclass
+    try:
+        yield
+    finally:
+        pydantic.dataclasses._validate_dataclass = orig
