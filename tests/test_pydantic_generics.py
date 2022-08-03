@@ -33,6 +33,10 @@ U = TypeVar("U")
 V = TypeVar("V")
 
 
+class Config:
+    arbitrary_types_allowed = True
+
+
 class _ClassValidatorMixin:
     @classmethod
     def __get_validators__(cls):
@@ -245,7 +249,7 @@ CASES = [
 
 @pytest.mark.parametrize("field, value", CASES)
 def test_simple_generics(field: type, value: Any) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -299,7 +303,7 @@ PARAMETRIZED_CASES = [
 
 @pytest.mark.parametrize("field, value, expected", PARAMETRIZED_CASES)
 def test_parametrized_generics(field: type, value: Any, expected: Any) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -345,7 +349,7 @@ OTHER_CASES = [
 
 @pytest.mark.parametrize("field, value, expected, expected_type", OTHER_CASES)
 def test_other_types(field: type, value: Any, expected: Any, expected_type: type) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -369,7 +373,7 @@ FAILING_CASES = [
 
 @pytest.mark.parametrize("field, value", FAILING_CASES)
 def test_incompatible_types(field: type, value: Any) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     with pytest.raises(ValidationError):
         Model(x=value)
@@ -380,7 +384,7 @@ def test_python39() -> None:
     field = MyTripleTuple[str, ...]
     value = (1, 2)
     expected = ('1', '2')
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -393,7 +397,7 @@ def test_python39() -> None:
     # different length of parameters and value
     field = MyTripleTuple[int, float, str]
     value = [1, 2]
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     with pytest.raises(ValidationError):
         instance = Model(x=value)
@@ -402,6 +406,7 @@ def test_python39() -> None:
 def test_color():
     """test separately because == does not work on Color"""
     class M(BaseModel):
+        Config = Config
         c: Color
 
     m = M(c='red')

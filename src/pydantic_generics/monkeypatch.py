@@ -46,25 +46,6 @@ def patched_make_arbitrary_type_validator() -> Iterator[None]:
 
 
 @contextmanager
-def force_arbitrary_types_allowed(namespace):
-    old_cfg = namespace.get('Config', None)
-    if old_cfg is None:
-        try:
-            cfg = type('Config', (), {'arbitrary_types_allowed': True})
-            namespace['Config'] = cfg
-            yield
-        finally:
-            del namespace['Config']
-
-    else:
-        try:
-            old_cfg.arbitrary_types_allowed = True
-            yield
-        finally:
-            old_cfg.arbitrary_types_allowed = False
-
-
-@contextmanager
 def patched_dataclass_validator():
     from .validators import _validate_dataclass
 
