@@ -1,28 +1,14 @@
 from contextlib import contextmanager
 from typing import Generic, Iterator, get_origin, get_args, Iterable, Mapping, Tuple
+from dataclasses import is_dataclass
 
 import pydantic.config
 import pydantic.fields
 import pydantic.validators
 
-from .validators import simple_casting_validator, element_casting_validator, mapping_casting_validator, tuple_element_casting_validator
+from .validators import simple_casting_validator, element_casting_validator, mapping_casting_validator, tuple_element_casting_validator, coerce_dataclass_validator
 
 __all__ = ["ModelField"]
-
-
-@contextmanager
-def generic_types_allowed(field: pydantic.fields.ModelField) -> Iterator[None]:
-    try:
-        is_generic = issubclass(field.outer_type_, Generic)  # type: ignore
-    except TypeError:
-        is_generic = False
-
-    config = field.model_config
-    before, config.arbitrary_types_allowed = config.arbitrary_types_allowed, is_generic
-    try:
-        yield
-    finally:
-        config.arbitrary_types_allowed = before
 
 
 @contextmanager
@@ -43,10 +29,7 @@ def generic_validator_inserted(field: pydantic.fields.ModelField) -> Iterator[No
 
 class ModelField(pydantic.fields.ModelField):
     def populate_validators(self) -> None:
-        # XXX: not sure I like this, "generic_types_allowed"
-        # the alternative would be to just say
-        # "you have to use arbitrary_types_allowed if you want to use this"
-        with generic_types_allowed(self), generic_validator_inserted(self):
+        with generic_validator_inserted(self):
             super().populate_validators()
             # override self.validators generation, cause we need *both* class validators
             # and generic validators
@@ -63,6 +46,9 @@ class ModelField(pydantic.fields.ModelField):
                     *[v.func for v in class_validators_ if v.each_item and not v.pre],
                 )
                 self.validators = pydantic.class_validators.prep_validators(v_funcs)
+
+            if is_dataclass(self.type_):
+                self.validators.extend(pydantic.class_validators.prep_validators([coerce_dataclass_validator(self.type_)]))
 
     def _type_analysis(self):
         origin = get_origin(self.outer_type_)

@@ -16,16 +16,25 @@ from typing import (
     Mapping,
     Tuple,
     Callable,
+    SupportsInt,
+    Protocol,
+    runtime_checkable,
 )
 
 import pytest
 from pydantic.error_wrappers import ValidationError
+from pydantic.color import Color
+from pydantic.dataclasses import dataclass
 
 from pydantic_generics import BaseModel, create_model
 
 T = TypeVar("T")
 U = TypeVar("U")
 V = TypeVar("V")
+
+
+class Config:
+    arbitrary_types_allowed = True
 
 
 class _ClassValidatorMixin:
@@ -175,6 +184,37 @@ class MyTripleTuple(_DunderMixin, Tuple[T, U, V]):
         self.v = tuple(v)
 
 
+@runtime_checkable
+class MyProtocol(Protocol):
+    x: int
+
+
+class MyConcreteProtocol(MyProtocol):
+    def __init__(self, x):
+        self.x = x
+
+    def __eq__(self, other):
+        return self.x == self.x
+
+
+class FollowsProtocol:
+    def __init__(self, x):
+        self.x = x
+
+    def __eq__(self, other):
+        return self.x == self.x
+
+
+class DoesNotFollowProtocol:
+    def __init__(self, y):
+        self.y = y
+
+
+@dataclass
+class MyDataClass:
+    a: int
+
+
 CASES = [
     (MyGeneric, 1),
     (MyGenericSequence, [1]),
@@ -209,7 +249,7 @@ CASES = [
 
 @pytest.mark.parametrize("field, value", CASES)
 def test_simple_generics(field: type, value: Any) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -263,7 +303,7 @@ PARAMETRIZED_CASES = [
 
 @pytest.mark.parametrize("field, value, expected", PARAMETRIZED_CASES)
 def test_parametrized_generics(field: type, value: Any, expected: Any) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -295,12 +335,21 @@ OTHER_CASES = [
     (MyString, '1', '1', MyString),
     (MyValidatingString, '1', '1', MyValidatingString),
     (Callable, noop, noop, type(noop)),
+    # abstract classes and protocols should not be coerced
+    (SupportsInt, 1, 1, int),
+    (MyProtocol, FollowsProtocol(1), FollowsProtocol(1), FollowsProtocol),
+    # but "concrete" protocols should
+    (MyConcreteProtocol, FollowsProtocol(1), MyConcreteProtocol(1), MyConcreteProtocol),
+    (MyDataClass, MyDataClass(a=1), MyDataClass(a=1), MyDataClass),
+    # optional dataclass must accept None
+    (Optional[MyDataClass], MyDataClass(a=1), MyDataClass(a=1), MyDataClass),
+    (Optional[MyDataClass], None, None, type(None)),
 ]
 
 
 @pytest.mark.parametrize("field, value, expected, expected_type", OTHER_CASES)
 def test_other_types(field: type, value: Any, expected: Any, expected_type: type) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -317,12 +366,14 @@ FAILING_CASES = [
     # TODO: this should not fail like this
     (MyTripleParameterIterable[int, float, str], [1]),
     (MyTuple[int], (1, 1)),
+    (SupportsInt, 'asd'),
+    (MyProtocol, DoesNotFollowProtocol(1)),
 ]
 
 
 @pytest.mark.parametrize("field, value", FAILING_CASES)
 def test_incompatible_types(field: type, value: Any) -> None:
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     with pytest.raises(ValidationError):
         Model(x=value)
@@ -333,7 +384,7 @@ def test_python39() -> None:
     field = MyTripleTuple[str, ...]
     value = (1, 2)
     expected = ('1', '2')
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
     attr = getattr(instance, "x")
@@ -346,7 +397,18 @@ def test_python39() -> None:
     # different length of parameters and value
     field = MyTripleTuple[int, float, str]
     value = [1, 2]
-    Model = create_model("Model", x=(field, ...))
+    Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     with pytest.raises(ValidationError):
         instance = Model(x=value)
+
+
+def test_color():
+    """test separately because == does not work on Color"""
+    class M(BaseModel):
+        Config = Config
+        c: Color
+
+    m = M(c='red')
+    assert isinstance(m.c, Color)
+    assert m.c.as_named() == 'red'
