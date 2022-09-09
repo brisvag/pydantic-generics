@@ -1,30 +1,30 @@
 import sys
 from typing import (
     Any,
+    Callable,
     Generic,
+    Iterable,
     List,
+    Literal,
+    Mapping,
     MutableMapping,
     MutableSequence,
     MutableSet,
-    Sequence,
-    TypeVar,
-    get_origin,
-    Union,
-    Literal,
     Optional,
-    Iterable,
-    Mapping,
-    Tuple,
-    Callable,
-    SupportsInt,
     Protocol,
+    Sequence,
+    SupportsInt,
+    Tuple,
+    TypeVar,
+    Union,
+    get_origin,
     runtime_checkable,
 )
 
 import pytest
-from pydantic.error_wrappers import ValidationError
 from pydantic.color import Color
 from pydantic.dataclasses import dataclass
+from pydantic.error_wrappers import ValidationError
 
 from extra_pydantic import BaseModel, create_model
 
@@ -50,7 +50,7 @@ class _ClassValidatorMixin:
 
 class _DunderMixin:
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.v)})'
+        return f"{self.__class__.__name__}({repr(self.v)})"
 
     def __eq__(self, o):
         return self.v == o
@@ -174,9 +174,9 @@ class MyGenericWithCustomValidator(Generic[T, U]):
     @classmethod
     def validate(cls, v, field):
         if isinstance(v, field.sub_fields[0].type_):
-            return 'first'
+            return "first"
         elif isinstance(v, field.sub_fields[1].type_):
-            return 'second'
+            return "second"
 
 
 class MyTripleTuple(_DunderMixin, Tuple[T, U, V]):
@@ -254,7 +254,7 @@ def test_simple_generics(field: type, value: Any) -> None:
     instance = Model(x=value)
     attr = getattr(instance, "x")
     custom_type = get_origin(field) or field
-    assert isinstance(attr, custom_type)
+    assert type(attr) is custom_type
 
 
 PARAMETRIZED_CASES = [
@@ -269,35 +269,43 @@ PARAMETRIZED_CASES = [
     (MyValidatingGenericSequence[int], [1], [1]),
     (MyValidatingMutableSet[int], {1}, {1}),
     # coerce element type
-    (MyMutableSequence[str], [1], ['1']),
-    (MyList[str], [1], ['1']),
-    (MyTuple[str], (1,), ('1',)),
-    (MyMutableMapping[str, str], {1: 2}, {'1': '2'}),
-    (MyMutableSet[str], {1}, {'1'}),
-    (MyMutableSequence[str], {1}, ['1']),
-    (MyValidatingMutableSequence[str], [1], ['1']),
-    (MyValidatingList[str], [1], ['1']),
-    (MyValidatingTuple[str], (1,), ('1',)),
-    (MyValidatingMutableMapping[str, str], {1: 2}, {'1': '2'}),
-    (MyValidatingMutableSet[str], {1}, {'1'}),
-    (MyValidatingMutableSequence[str], {1}, ['1']),
+    (MyMutableSequence[str], [1], ["1"]),
+    (MyList[str], [1], ["1"]),
+    (MyTuple[str], (1,), ("1",)),
+    (MyMutableMapping[str, str], {1: 2}, {"1": "2"}),
+    (MyMutableSet[str], {1}, {"1"}),
+    (MyMutableSequence[str], {1}, ["1"]),
+    (MyValidatingMutableSequence[str], [1], ["1"]),
+    (MyValidatingList[str], [1], ["1"]),
+    (MyValidatingTuple[str], (1,), ("1",)),
+    (MyValidatingMutableMapping[str, str], {1: 2}, {"1": "2"}),
+    (MyValidatingMutableSet[str], {1}, {"1"}),
+    (MyValidatingMutableSequence[str], {1}, ["1"]),
     # coerce container type as well
-    (MyMutableSequence[str], {1}, ['1']),
-    (MyList[str], {1}, ['1']),
-    (MyTuple[str], {1}, ('1',)),
-    (MyMutableSet[str], [1], {'1'}),
-    (MyValidatingMutableSequence[str], {1}, ['1']),
-    (MyValidatingList[str], {1}, ['1']),
-    (MyValidatingTuple[str], {1}, ('1',)),
-    (MyValidatingMutableSet[str], [1], {'1'}),
-    (MyList[int], '123', [1, 2, 3]),
+    (MyMutableSequence[str], {1}, ["1"]),
+    (MyList[str], {1}, ["1"]),
+    (MyTuple[str], {1}, ("1",)),
+    (MyMutableSet[str], [1], {"1"}),
+    (MyValidatingMutableSequence[str], {1}, ["1"]),
+    (MyValidatingList[str], {1}, ["1"]),
+    (MyValidatingTuple[str], {1}, ("1",)),
+    (MyValidatingMutableSet[str], [1], {"1"}),
+    (MyList[int], "123", [1, 2, 3]),
     # multiple parameters for iterable will validate one by one
-    (MyTripleTuple[int, float, str], [1, 2, 3], (1, 2.0, '3')),
+    (MyTripleTuple[int, float, str], [1, 2, 3], (1, 2.0, "3")),
     # custom validation coerce to the right
-    (MyGenericWithCustomValidator[str, int], 'a', 'first'),
-    (MyGenericWithCustomValidator[str, int], 1, 'second'),
-    (MyList[MyList[Union[int, str]]], [[1, 'a', 1.0], [False]], [MyList([1, 'a', 1]), MyList([0])]),
-    (MyMutableMapping[MyString, MyMutableSet[float]], {1: {1, False}}, {MyString('1'): MyMutableSet({1.0, 0.0})}),
+    (MyGenericWithCustomValidator[str, int], "a", "first"),
+    (MyGenericWithCustomValidator[str, int], 1, "second"),
+    (
+        MyList[MyList[Union[int, str]]],
+        [[1, "a", 1.0], [False]],
+        [MyList([1, "a", 1]), MyList([0])],
+    ),
+    (
+        MyMutableMapping[MyString, MyMutableSet[float]],
+        {1: {1, False}},
+        {MyString("1"): MyMutableSet({1.0, 0.0})},
+    ),
 ]
 
 
@@ -311,10 +319,12 @@ def test_parametrized_generics(field: type, value: Any, expected: Any) -> None:
     assert isinstance(attr, custom_type)
     if issubclass(custom_type, Iterable):
         assert all(v == e for v, e in zip(attr.v, expected))
-        assert all(type(v) == type(e) for v, e in zip(attr.v, expected))
+        assert all(type(v) is type(e) for v, e in zip(attr.v, expected))
     if issubclass(custom_type, Mapping):
         assert all(v == e for v, e in zip(attr.v.values(), expected.values()))
-        assert all(type(v) == type(e) for v, e in zip(attr.v.values(), expected.values()))
+        assert all(
+            type(v) is type(e) for v, e in zip(attr.v.values(), expected.values())
+        )
     assert attr.v == expected
 
 
@@ -324,16 +334,16 @@ def noop():
 
 OTHER_CASES = [
     # union tries to coerce in order and stops as soon as it succeeds
-    (Union[str, float], 1.0, '1.0', str),
-    (Union[float, str], '1', 1.0, float),
+    (Union[str, float], 1.0, "1.0", str),
+    (Union[float, str], "1", 1.0, float),
     # optional should not fail with None
     (Optional[int], None, None, type(None)),
     (Optional[int], 1, 1, int),
     # Literal is not a subclass of type, so it can cause issues when using `issubclass`
     (Literal[1], 1, 1, int),
     # subclass of builtin
-    (MyString, '1', '1', MyString),
-    (MyValidatingString, '1', '1', MyValidatingString),
+    (MyString, "1", "1", MyString),
+    (MyValidatingString, "1", "1", MyValidatingString),
     (Callable, noop, noop, type(noop)),
     # abstract classes and protocols should not be coerced
     (SupportsInt, 1, 1, int),
@@ -348,7 +358,9 @@ OTHER_CASES = [
 
 
 @pytest.mark.parametrize("field, value, expected, expected_type", OTHER_CASES)
-def test_other_types(field: type, value: Any, expected: Any, expected_type: type) -> None:
+def test_other_types(
+    field: type, value: Any, expected: Any, expected_type: type
+) -> None:
     Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
@@ -361,12 +373,12 @@ FAILING_CASES = [
     (MyGenericSequence, 1),
     (MyMutableSequence, None),
     (MyMutableMapping, [1]),
-    (MyGenericSequence[int], 'asd'),
-    (MyMutableMapping[int, int], {'a': 'b'}),
+    (MyGenericSequence[int], "asd"),
+    (MyMutableMapping[int, int], {"a": "b"}),
     # TODO: this should not fail like this
     (MyTripleParameterIterable[int, float, str], [1]),
     (MyTuple[int], (1, 1)),
-    (SupportsInt, 'asd'),
+    (SupportsInt, "asd"),
     (MyProtocol, DoesNotFollowProtocol(1)),
 ]
 
@@ -379,11 +391,11 @@ def test_incompatible_types(field: type, value: Any) -> None:
         Model(x=value)
 
 
-@pytest.mark.skipif(sys.version_info < (3, 9), reason='requires python3.9 or higher')
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="requires python3.9 or higher")
 def test_python39() -> None:
     field = MyTripleTuple[str, ...]
     value = (1, 2)
-    expected = ('1', '2')
+    expected = ("1", "2")
     Model = create_model("Model", x=(field, ...), __config__=Config)
     assert issubclass(Model, BaseModel)
     instance = Model(x=value)
@@ -391,7 +403,7 @@ def test_python39() -> None:
     custom_type = get_origin(field) or field
     assert isinstance(attr, custom_type)
     assert all(v == e for v, e in zip(attr.v, expected))
-    assert all(type(v) == type(e) for v, e in zip(attr.v, expected))
+    assert all(type(v) is type(e) for v, e in zip(attr.v, expected))
     assert attr.v == expected
 
     # different length of parameters and value
@@ -405,10 +417,11 @@ def test_python39() -> None:
 
 def test_color():
     """test separately because == does not work on Color"""
+
     class M(BaseModel):
         Config = Config
         c: Color
 
-    m = M(c='red')
+    m = M(c="red")
     assert isinstance(m.c, Color)
-    assert m.c.as_named() == 'red'
+    assert m.c.as_named() == "red"
