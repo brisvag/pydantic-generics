@@ -26,7 +26,7 @@ from pydantic.error_wrappers import ValidationError
 from pydantic.color import Color
 from pydantic.dataclasses import dataclass
 
-from pydantic_generics import BaseModel, create_model
+from extra_pydantic import BaseModel, create_model
 
 T = TypeVar("T")
 U = TypeVar("U")

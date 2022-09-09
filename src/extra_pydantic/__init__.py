@@ -3,7 +3,7 @@
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("pydantic-generics")
+    __version__ = version("extra-pydantic")
 except PackageNotFoundError:
     __version__ = "uninstalled"
 __author__ = "Talley Lambert"

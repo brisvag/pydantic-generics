@@ -1,4 +1,4 @@
-* pydantic-generics version:
+* extra-pydantic version:
 * Python version:
 * Operating System:
 

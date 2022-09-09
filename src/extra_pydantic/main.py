@@ -14,7 +14,7 @@ class ModelMetaclass(pydantic.main.ModelMetaclass):
         with patched_pydantic_model_field(), patched_dataclass_validator():
             new_cls = super().__new__(cls, name, bases, namespace, **kwargs)
             if _is_base_model_class_defined and not new_cls.__config__.arbitrary_types_allowed:
-                raise ValueError('arbitrary_types_allowed must be True for pydantic_generics to work')
+                raise ValueError('arbitrary_types_allowed must be True for extra_pydantic to work')
             return new_cls
 
 
