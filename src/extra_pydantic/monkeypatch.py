@@ -46,10 +46,13 @@ def patched_make_arbitrary_type_validator() -> Iterator[None]:
 
 
 @contextmanager
-def patched_dataclass_validator():
+def patched_dataclass_validator() -> Iterator[None]:
     from .validators import _validate_dataclass
 
-    orig, pydantic.dataclasses._validate_dataclass = pydantic.dataclasses._validate_dataclass, _validate_dataclass
+    orig, pydantic.dataclasses._validate_dataclass = (
+        pydantic.dataclasses._validate_dataclass,
+        _validate_dataclass,
+    )
     try:
         yield
     finally:

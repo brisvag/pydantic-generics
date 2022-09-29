@@ -2,10 +2,17 @@ from typing import Any, Type, no_type_check
 
 import pydantic.main
 
-from .monkeypatch import patched_pydantic_base_model, patched_pydantic_model_field, patched_dataclass_validator
-
+from .monkeypatch import (
+    patched_dataclass_validator,
+    patched_pydantic_base_model,
+    patched_pydantic_model_field,
+)
 
 _is_base_model_class_defined = False
+
+
+# monkeypatched metaclass which uses our special ModelField
+# the dataclass_validator patch is needed due to side effects of our coercion logic
 
 
 class ModelMetaclass(pydantic.main.ModelMetaclass):
@@ -13,8 +20,13 @@ class ModelMetaclass(pydantic.main.ModelMetaclass):
     def __new__(cls, name, bases, namespace, **kwargs):
         with patched_pydantic_model_field(), patched_dataclass_validator():
             new_cls = super().__new__(cls, name, bases, namespace, **kwargs)
-            if _is_base_model_class_defined and not new_cls.__config__.arbitrary_types_allowed:
-                raise ValueError('arbitrary_types_allowed must be True for extra_pydantic to work')
+            if (
+                _is_base_model_class_defined
+                and not new_cls.__config__.arbitrary_types_allowed
+            ):
+                raise ValueError(
+                    "arbitrary_types_allowed must be True for extra_pydantic to work"
+                )
             return new_cls
 
 
